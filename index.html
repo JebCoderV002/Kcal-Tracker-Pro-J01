@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KcalTracker Pro - Luxury Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Light Theme Variables */
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --secondary: #a855f7;
+            --accent: #f59e0b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --nav-bg: rgba(255, 255, 255, 0.8);
+            --border: #e2e8f0;
+            --radius-xl: 32px;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.04);
+            --glass: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg: #020617;
+            --card: #1e293b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --nav-bg: rgba(15, 23, 42, 0.8);
+            --border: #334155;
+            --glass: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.3);
+        }
+
+        * { 
+            box-sizing: border-box; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        body { 
+            background-color: var(--bg); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding-bottom: 120px; 
+            overflow-x: hidden;
+        }
+
+        .container { 
+            width: 100%; 
+            max-width: 500px; 
+            margin: 0 auto; 
+            padding: 24px 20px; 
+        }
+
+        /* Sync Status Toast */
+        #sync-status {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s ease;
+        }
+        #sync-status.show { transform: translateX(-50%) translateY(0); }
+        #sync-status.syncing { background: var(--primary); color: white; }
+        #sync-status.success { background: var(--success); color: white; }
+
+        /* Luxury Header */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        .header h1 { 
+            font-size: 1.75rem; font-weight: 800; margin: 0; 
+            background: linear-gradient(135deg, var(--primary), var(--secondary)); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        /* Theme Buttons */
+        .theme-selector { display: flex; background: var(--card); border: 1px solid var(--border); padding: 4px; border-radius: 50px; gap: 4px; }
+        .theme-btn { border: none; background: none; cursor: pointer; padding: 6px; border-radius: 50%; color: var(--text-sub); width: 32px; height: 32px; }
+        .theme-btn.active { background: var(--primary); color: white; }
+
+        /* Dashboard Card */
+        .dashboard-card { 
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
+            border-radius: var(--radius-xl); padding: 32px 24px; color: white; margin-bottom: 32px; 
+            box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.4);
+        }
+        .kcal-big { font-size: 3.5rem; font-weight: 800; line-height: 1; letter-spacing: -2px; }
+        .progress-bg { background: rgba(255, 255, 255, 0.15); height: 12px; border-radius: 20px; margin-top: 20px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: #ffffff; transition: width 0.8s ease; }
+
+        /* Inputs & Lists */
+        .date-input { width: 100%; border: 1px solid var(--border); padding: 16px 20px; border-radius: var(--radius-md); font-weight: 700; background: var(--card); color: var(--primary); outline: none; margin-bottom: 24px; }
+        .item-card { background: var(--card); padding: 20px; border-radius: var(--radius-lg); display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; box-shadow: var(--shadow-lg); border: 1px solid var(--border); }
+        .kcal-badge { background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; padding: 4px 12px; border-radius: 50px; font-size: 0.9rem; font-weight: 800; }
+
+        /* Buttons */
+        .btn { border: none; border-radius: var(--radius-md); padding: 18px; font-weight: 700; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; transition: 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
+        .btn-outline { background: var(--card); border: 1px solid var(--border); color: var(--text-main); }
+        .btn-del { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: none; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+
+        /* Bottom Nav */
+        .bottom-nav { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 400px; background: var(--nav-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; justify-content: space-around; padding: 10px; border-radius: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 1px solid var(--glass-border); z-index: 1000; }
+        .nav-item { border: none; background: none; color: var(--text-sub); font-size: 0.75rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 16px; transition: 0.3s; }
+        .nav-item.active { color: var(--primary); }
+
+        /* Modal */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); display: none; align-items: flex-end; z-index: 2000; }
+        .modal-content { background: var(--card); width: 100%; padding: 32px 24px 48px; border-radius: 32px 32px 0 0; animation: slideIn 0.4s ease; }
+        @keyframes slideIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 0.9rem; }
+        .form-group input, .form-group select { width: 100%; padding: 14px 16px; border: 1.5px solid var(--border); border-radius: 14px; background: var(--bg); color: var(--text-main); font-weight: 600; outline: none; }
+
+        .loading { position: fixed; inset: 0; background: var(--bg); z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .spinner { width: 50px; height: 50px; border: 5px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: rot 1s linear infinite; }
+        @keyframes rot { to { transform: rotate(360deg); } }
+
+        .view { display: none; }
+        .view.active { display: block; }
+        .section-title { font-size: 1.25rem; font-weight: 800; margin: 32px 0 16px; display: flex; align-items: center; gap: 10px; }
+        .section-title span { width: 4px; height: 20px; background: var(--primary); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="sync-status" class="syncing">
+    <span id="sync-icon">🔄</span> <span id="sync-text">Đang đồng bộ...</span>
+</div>
+
+<div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p style="margin-top:20px; font-weight:700; color:var(--text-sub);">LUXURY WELLNESS</p>
+</div>
+
+<div class="container">
+    <div class="header">
+        <h1>KcalTracker Pro</h1>
+        <div class="theme-selector">
+            <button class="theme-btn" onclick="setTheme('light')" id="theme-light">☀️</button>
+            <button class="theme-btn" onclick="setTheme('system')" id="theme-system">🖥️</button>
+            <button class="theme-btn" onclick="setTheme('dark')" id="theme-dark">🌙</button>
+        </div>
+    </div>
+
+    <!-- DIARY VIEW -->
+    <div id="view-diary" class="view active">
+        <input type="date" id="datePicker" class="date-input">
+        
+        <div class="dashboard-card">
+            <div style="font-size:0.85rem; opacity:0.8; font-weight:600; text-transform:uppercase;">Calories Hôm nay</div>
+            <div style="margin: 8px 0; display: flex; align-items: baseline; gap: 10px;">
+                <span id="curKcal" class="kcal-big">0</span> 
+                <span style="font-size:1.2rem; opacity:0.8;">/ <span id="goalLabel">0</span></span>
+            </div>
+            <div class="progress-bg"><div id="progressFill" class="progress-fill"></div></div>
+            <div style="margin-top: 15px; font-size: 0.8rem; font-weight: 600; opacity: 0.8; display: flex; justify-content: space-between;">
+                <span>SAI SỐ DỰ PHÒNG 10%</span>
+                <span id="pctLabel">0%</span>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="openModal('addLogModal')">THÊM BỮA ĂN</button>
+        <div class="section-title"><span></span>LỊCH SỬ</div>
+        <div id="diaryList"></div>
+    </div>
+
+    <!-- LIBRARY VIEW -->
+    <div id="view-library" class="view">
+        <button class="btn btn-primary" onclick="openModal('addLibModal')">TẠO MÓN MỚI</button>
+        <div class="section-title"><span></span>THƯ VIỆN</div>
+        <div id="libraryList"></div>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div id="view-settings" class="view">
+        <div class="section-title"><span></span>MỤC TIÊU</div>
+        <div style="background:var(--card); padding:24px; border-radius:var(--radius-lg); border: 1px solid var(--border);">
+            <div class="form-group">
+                <label>Hạn mức Calories mỗi ngày</label>
+                <input type="number" id="goalInput">
+            </div>
+            <button class="btn btn-primary" onclick="updateGoal()">LƯU CÀI ĐẶT</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ADD LOG -->
+<div id="addLogModal" class="modal" onclick="if(event.target==this) closeModal('addLogModal')">
+    <div class="modal-content">
+        <h3 style="margin:0 0 20px 0;">Ghi nhận bữa ăn</h3>
+        <div class="form-group">
+            <label>Chọn món từ thư viện</label>
+            <select id="logFoodSelect"></select>
+        </div>
+        <div class="form-group">
+            <label>Số lượng</label>
+            <input type="number" id="logQty" value="1" step="0.1">
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:12px;">
+            <button class="btn btn-outline" onclick="closeModal('addLogModal')">HỦY</button>
+            <button class="btn btn-primary" onclick="submitLog()">XÁC NHẬN</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ADD LIB -->
+<div id="addLibModal" class="modal" onclick="if(event.target==this) closeModal('addLibModal')">
+    <div class="modal-content">
+        <h3 style="margin:0 0 20px 0;">Thêm thư viện</h3>
+        <div class="form-group"><label>Tên món</label><input type="text" id="libName"></div>
+        <div class="form-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div><label>Đơn vị</label><input type="text" id="libUnit"></div>
+            <div><label>Kcal gốc</label><input type="number" id="libKcal"></div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:12px;">
+            <button class="btn btn-outline" onclick="closeModal('addLibModal')">HỦY</button>
+            <button class="btn btn-primary" onclick="submitLib()">LƯU MÓN</button>
+        </div>
+    </div>
+</div>
+
+<nav class="bottom-nav">
+    <button class="nav-item active" onclick="switchTab('diary', this)"><i>📔</i>Nhật ký</button>
+    <button class="nav-item" onclick="switchTab('library', this)"><i>📚</i>Thư viện</button>
+    <button class="nav-item" onclick="switchTab('settings', this)"><i>⚙️</i>Cài đặt</button>
+</nav>
+
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbyN1xIKuuf2XCIpEpMW4OU9WzZPno6vpimdhaj1slYFum4u7_DIvRSn_hI1KTPNGhX1/exec";
+
+    let state = {
+        logs: [], library: [], goal: 2000,
+        selectedDate: new Date().toISOString().split('T')[0],
+        theme: localStorage.getItem('kcal-theme') || 'system'
+    };
+
+    window.onload = () => {
+        applyTheme(state.theme);
+        document.getElementById('datePicker').value = state.selectedDate;
+        document.getElementById('datePicker').onchange = (e) => { state.selectedDate = e.target.value; renderDiary(); };
+        initialLoad();
+    };
+
+    // --- SMART TOAST SYSTEM ---
+    function notifySync(status) {
+        const toast = document.getElementById('sync-status');
+        const icon = document.getElementById('sync-icon');
+        const text = document.getElementById('sync-text');
+
+        if (status === 'syncing') {
+            toast.className = 'show syncing';
+            icon.innerText = '🔄';
+            text.innerText = 'Đang đồng bộ...';
+        } else if (status === 'success') {
+            toast.className = 'show success';
+            icon.innerText = '✅';
+            text.innerText = 'Đã lưu thành công';
+            
+            // Tự động ẩn sau 2 giây
+            setTimeout(() => {
+                toast.className = '';
+            }, 2000);
+        }
+    }
+
+    function toggleLoading(s) { document.getElementById('loading').style.display = s ? 'flex' : 'none'; }
+
+    async function initialLoad() {
+        toggleLoading(true);
+        await refreshData(false);
+        toggleLoading(false);
+    }
+
+    async function refreshData(withToast = true) {
+        if(withToast) notifySync('syncing');
+        try {
+            const res = await fetch(API_URL);
+            const data = await res.json();
+            state.logs = data.logs;
+            state.library = data.library;
+            state.goal = data.goal;
+            renderDiary();
+            renderLibrary();
+            document.getElementById('goalInput').value = state.goal;
+            if(withToast) notifySync('success');
+        } catch (e) { console.error(e); }
+    }
+
+    function renderDiary() {
+        const list = document.getElementById('diaryList');
+        const dayLogs = state.logs.filter(l => l.date === state.selectedDate);
+        const total = dayLogs.reduce((acc, curr) => acc + curr.total_kcal, 0);
+
+        document.getElementById('curKcal').innerText = Math.round(total).toLocaleString();
+        document.getElementById('goalLabel').innerText = state.goal.toLocaleString();
+        const pct = Math.min((total / state.goal) * 100, 100);
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('pctLabel').innerText = Math.round(pct) + '%';
+
+        list.innerHTML = dayLogs.length ? dayLogs.map(l => `
+            <div class="item-card">
+                <div class="item-info"><h4>${l.food_name}</h4><p>${l.quantity} phần • ${l.kcal_per_unit} kcal/đv</p></div>
+                <div style="display:flex; align-items:center;">
+                    <div class="kcal-badge">${Math.round(l.total_kcal)} kcal</div>
+                    <button class="btn-del" style="margin-left:12px" onclick="deleteItem('LOG', ${l.rowIndex})">❌</button>
+                </div>
+            </div>
+        `).join('') : '<p style="text-align:center; color:var(--text-sub);">Chưa có dữ liệu hôm nay</p>';
+    }
+
+    function renderLibrary() {
+        const list = document.getElementById('libraryList');
+        list.innerHTML = state.library.map(i => `
+            <div class="item-card">
+                <div class="item-info"><h4>${i.name}</h4><p>${i.kcal} kcal / ${i.unit}</p></div>
+                <button class="btn-del" onclick="deleteItem('LIB', ${i.rowIndex})">❌</button>
+            </div>
+        `).join('');
+        const select = document.getElementById('logFoodSelect');
+        select.innerHTML = '<option value="">-- Chọn món --</option>' + 
+            state.library.map((item, idx) => `<option value="${idx}">${item.name}</option>`).join('');
+    }
+
+    async function submitLog() {
+        const idx = document.getElementById('logFoodSelect').value;
+        const qty = parseFloat(document.getElementById('logQty').value);
+        if(idx === "" || isNaN(qty)) return;
+
+        const food = state.library[idx];
+        const safeKcalPerUnit = Math.round(food.kcal * 1.1);
+        
+        // Optimistic UI
+        state.logs.push({ date: state.selectedDate, food_name: food.name, quantity: qty, kcal_per_unit: safeKcalPerUnit, total_kcal: safeKcalPerUnit * qty, rowIndex: -1 });
+        renderDiary();
+        closeModal('addLogModal');
+        
+        notifySync('syncing');
+        await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'ADD_LOG', date: state.selectedDate, food_name: food.name, quantity: qty, kcal_per_unit: safeKcalPerUnit })});
+        setTimeout(() => refreshData(true), 1500);
+    }
+
+    async function submitLib() {
+        const name = document.getElementById('libName').value;
+        const unit = document.getElementById('libUnit').value;
+        const kcal = parseFloat(document.getElementById('libKcal').value);
+        if(!name || !unit || isNaN(kcal)) return;
+
+        state.library.push({ name, unit, kcal, rowIndex: -1 });
+        renderLibrary();
+        closeModal('addLibModal');
+
+        notifySync('syncing');
+        await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'ADD_LIB', name, unit, kcal })});
+        setTimeout(() => refreshData(true), 1500);
+    }
+
+    async function updateGoal() {
+        const goalVal = parseInt(document.getElementById('goalInput').value);
+        state.goal = goalVal;
+        renderDiary();
+        notifySync('syncing');
+        await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'UPDATE_GOAL', goal: goalVal })});
+        notifySync('success');
+    }
+
+    async function deleteItem(sheet, row) {
+        if(!confirm("Xác nhận xóa?")) return;
+        if(sheet === 'LOG') state.logs = state.logs.filter(l => l.rowIndex !== row);
+        else state.library = state.library.filter(i => i.rowIndex !== row);
+        renderDiary(); renderLibrary();
+
+        notifySync('syncing');
+        await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'DELETE_ROW', sheet, row })});
+        setTimeout(() => refreshData(true), 1000);
+    }
+
+    function switchTab(tab, btn) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('view-' + tab).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    function setTheme(mode) {
+        state.theme = mode; localStorage.setItem('kcal-theme', mode); applyTheme(mode);
+    }
+    function applyTheme(mode) {
+        const body = document.body;
+        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`theme-${mode}`).classList.add('active');
+        if (mode === 'system') {
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        } else body.setAttribute('data-theme', mode);
+    }
+</script>
+
+</body>
+</html>
