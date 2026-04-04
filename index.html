@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KcalTracker Pro - Luxury Dashboard</title>
+    <title>KcalTracker Pro - Supabase Engine</title>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             /* Light Theme Variables */
@@ -83,6 +85,7 @@
         #sync-status.show { transform: translateX(-50%) translateY(0); }
         #sync-status.syncing { background: var(--primary); color: white; }
         #sync-status.success { background: var(--success); color: white; }
+        #sync-status.error { background: var(--danger); color: white; }
 
         /* Luxury Header */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
@@ -120,7 +123,7 @@
 
         /* Bottom Nav */
         .bottom-nav { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 400px; background: var(--nav-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; justify-content: space-around; padding: 10px; border-radius: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 1px solid var(--glass-border); z-index: 1000; }
-        .nav-item { border: none; background: none; color: var(--text-sub); font-size: 0.75rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 16px; transition: 0.3s; }
+        .nav-item { border: none; background: none; color: var(--text-sub); font-size: 0.75rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 16px; transition: 0.3s; cursor: pointer; }
         .nav-item.active { color: var(--primary); }
 
         /* Modal */
@@ -144,13 +147,13 @@
 </head>
 <body>
 
-<div id="sync-status" class="syncing">
-    <span id="sync-icon">🔄</span> <span id="sync-text">Đang đồng bộ...</span>
+<div id="sync-status">
+    <span id="sync-icon">🔄</span> <span id="sync-text">Đang kết nối...</span>
 </div>
 
 <div id="loading" class="loading">
     <div class="spinner"></div>
-    <p style="margin-top:20px; font-weight:700; color:var(--text-sub);">LUXURY WELLNESS</p>
+    <p style="margin-top:20px; font-weight:700; color:var(--text-sub);">SUPABASE POWERED</p>
 </div>
 
 <div class="container">
@@ -171,7 +174,7 @@
             <div style="font-size:0.85rem; opacity:0.8; font-weight:600; text-transform:uppercase;">Calories Hôm nay</div>
             <div style="margin: 8px 0; display: flex; align-items: baseline; gap: 10px;">
                 <span id="curKcal" class="kcal-big">0</span> 
-                <span style="font-size:1.2rem; opacity:0.8;">/ <span id="goalLabel">0</span></span>
+                <span style="font-size:1.2rem; opacity:0.8;">/ <span id="goalLabel">2000</span></span>
             </div>
             <div class="progress-bg"><div id="progressFill" class="progress-fill"></div></div>
             <div style="margin-top: 15px; font-size: 0.8rem; font-weight: 600; opacity: 0.8; display: flex; justify-content: space-between;">
@@ -194,14 +197,28 @@
 
     <!-- SETTINGS VIEW -->
     <div id="view-settings" class="view">
-        <div class="section-title"><span></span>MỤC TIÊU</div>
-        <div style="background:var(--card); padding:24px; border-radius:var(--radius-lg); border: 1px solid var(--border);">
+        <div class="section-title"><span></span>CÀI ĐẶT & BẢO TRÌ</div>
+        <div style="background:var(--card); padding:24px; border-radius:var(--radius-lg); border: 1px solid var(--border); margin-bottom: 16px;">
             <div class="form-group">
                 <label>Hạn mức Calories mỗi ngày</label>
                 <input type="number" id="goalInput">
             </div>
             <button class="btn btn-primary" onclick="updateGoal()">LƯU CÀI ĐẶT</button>
         </div>
+        
+        <div style="background:var(--card); padding:24px; border-radius:var(--radius-lg); border: 1px solid var(--border);">
+            <label style="display:block; font-weight:700; margin-bottom:12px; font-size:0.9rem;">Bảo trì Database</label>
+            <p style="font-size:0.8rem; color:var(--text-sub); margin-bottom:16px;">
+                Hệ thống tự động xóa các bản ghi cũ hơn 3 tháng mỗi khi khởi động. Bạn cũng có thể kích hoạt thủ công bên dưới.
+            </p>
+            <button class="btn btn-outline" style="color:var(--danger); border-color:var(--danger)" onclick="autoCleanupLogs(true)">
+                DỌN DẸP NGAY BÂY GIỜ
+            </button>
+        </div>
+
+        <p style="text-align: center; margin-top: 24px; font-size: 0.7rem; color: var(--text-sub);">
+            Powered by Supabase Realtime Database
+        </p>
     </div>
 </div>
 
@@ -219,7 +236,7 @@
         </div>
         <div style="display:grid; grid-template-columns: 1fr 2fr; gap:12px;">
             <button class="btn btn-outline" onclick="closeModal('addLogModal')">HỦY</button>
-            <button class="btn btn-primary" onclick="submitLog()">XÁC NHẬN</button>
+            <button class="btn btn-primary" id="btnSubmitLog" onclick="submitLog()">XÁC NHẬN</button>
         </div>
     </div>
 </div>
@@ -228,14 +245,14 @@
 <div id="addLibModal" class="modal" onclick="if(event.target==this) closeModal('addLibModal')">
     <div class="modal-content">
         <h3 style="margin:0 0 20px 0;">Thêm thư viện</h3>
-        <div class="form-group"><label>Tên món</label><input type="text" id="libName"></div>
+        <div class="form-group"><label>Tên món</label><input type="text" id="libName" placeholder="Ví dụ: Cơm trắng"></div>
         <div class="form-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-            <div><label>Đơn vị</label><input type="text" id="libUnit"></div>
-            <div><label>Kcal gốc</label><input type="number" id="libKcal"></div>
+            <div><label>Đơn vị</label><input type="text" id="libUnit" placeholder="bát, cái, gram"></div>
+            <div><label>Kcal gốc</label><input type="number" id="libKcal" placeholder="0"></div>
         </div>
         <div style="display:grid; grid-template-columns: 1fr 2fr; gap:12px;">
             <button class="btn btn-outline" onclick="closeModal('addLibModal')">HỦY</button>
-            <button class="btn btn-primary" onclick="submitLib()">LƯU MÓN</button>
+            <button class="btn btn-primary" id="btnSubmitLib" onclick="submitLib()">LƯU MÓN</button>
         </div>
     </div>
 </div>
@@ -247,96 +264,160 @@
 </nav>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyN1xIKuuf2XCIpEpMW4OU9WzZPno6vpimdhaj1slYFum4u7_DIvRSn_hI1KTPNGhX1/exec";
+    // --- SUPABASE CONFIG ---
+    const SUPABASE_URL = "https://blqlwcupzigwfiekhfns.supabase.co"; 
+    const SUPABASE_KEY = "sb_publishable_edRGbdZVh_U_I3MUXO73Hw_i5rZeV9A"; 
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let state = {
-        logs: [], library: [], goal: 2000,
-        selectedDate: new Date().toISOString().split('T')[0],
+        logs: [], 
+        library: [], 
+        goal: 2000,
+        selectedDate: new Date().toLocaleDateString('en-CA'), 
         theme: localStorage.getItem('kcal-theme') || 'system'
     };
 
-    window.onload = () => {
+    window.onload = async () => {
         applyTheme(state.theme);
         document.getElementById('datePicker').value = state.selectedDate;
-        document.getElementById('datePicker').onchange = (e) => { state.selectedDate = e.target.value; renderDiary(); };
-        initialLoad();
+        document.getElementById('datePicker').onchange = async (e) => { 
+            state.selectedDate = e.target.value; 
+            await fetchLogs(); 
+        };
+        
+        if (!SUPABASE_URL || !SUPABASE_KEY) {
+            toggleLoading(false);
+            notifySync('error', 'Cấu hình Supabase trống!');
+            return;
+        }
+
+        await initialLoad();
+        // Tự động dọn dẹp log cũ ngay khi vào app
+        autoCleanupLogs();
     };
 
-    // --- SMART TOAST SYSTEM ---
-    function notifySync(status) {
+    function notifySync(status, customMsg) {
         const toast = document.getElementById('sync-status');
         const icon = document.getElementById('sync-icon');
         const text = document.getElementById('sync-text');
-
-        if (status === 'syncing') {
-            toast.className = 'show syncing';
-            icon.innerText = '🔄';
-            text.innerText = 'Đang đồng bộ...';
-        } else if (status === 'success') {
-            toast.className = 'show success';
-            icon.innerText = '✅';
-            text.innerText = 'Đã lưu thành công';
-            
-            // Tự động ẩn sau 2 giây
-            setTimeout(() => {
-                toast.className = '';
-            }, 2000);
-        }
+        toast.className = 'show ' + status;
+        if (status === 'syncing') { icon.innerText = '🔄'; text.innerText = customMsg || 'Đang đồng bộ...'; }
+        else if (status === 'success') { icon.innerText = '✅'; text.innerText = customMsg || 'Đã lưu thành công'; setTimeout(() => toast.className = '', 2000); }
+        else if (status === 'error') { icon.innerText = '⚠️'; text.innerText = customMsg || 'Lỗi kết nối'; setTimeout(() => toast.className = '', 4000); }
     }
 
     function toggleLoading(s) { document.getElementById('loading').style.display = s ? 'flex' : 'none'; }
 
     async function initialLoad() {
         toggleLoading(true);
-        await refreshData(false);
+        try {
+            await fetchLibrary();
+            await fetchGoal();
+            await fetchLogs();
+        } catch (e) {
+            console.error("Lỗi khởi tạo:", e);
+        }
         toggleLoading(false);
     }
 
-    async function refreshData(withToast = true) {
-        if(withToast) notifySync('syncing');
+    // --- TÍNH NĂNG MỚI: TỰ ĐỘNG DỌN DẸP LOG CŨ HƠN 3 THÁNG ---
+    async function autoCleanupLogs(manual = false) {
+        if(manual) notifySync('syncing', 'Đang dọn dẹp data cũ...');
+        
         try {
-            const res = await fetch(API_URL);
-            const data = await res.json();
-            state.logs = data.logs;
-            state.library = data.library;
-            state.goal = data.goal;
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+            const dateStr = threeMonthsAgo.toLocaleDateString('en-CA'); // YYYY-MM-DD
+
+            const { count, error } = await _supabase
+                .from('logs')
+                .delete()
+                .lt('date', dateStr); // Xóa các bản ghi có ngày nhỏ hơn (cũ hơn) mốc này
+
+            if (!error) {
+                if(manual) notifySync('success', 'Đã dọn dẹp xong!');
+                console.log(`Bảo trì: Đã dọn dẹp các log cũ trước ngày ${dateStr}`);
+            } else {
+                console.error("Lỗi bảo trì:", error);
+                if(manual) notifySync('error', 'Lỗi dọn dẹp: ' + error.message);
+            }
+        } catch (e) {
+            console.error("Lỗi thực thi dọn dẹp:", e);
+        }
+    }
+
+    async function fetchLibrary() {
+        const { data, error } = await _supabase.from('library').select('*');
+        if (!error) { 
+            state.library = (data || []).sort((a, b) => (a.name || "").localeCompare(b.name || "")); 
+            renderLibrary(); 
+        } else {
+            notifySync('error', 'Lỗi Library: ' + error.message);
+        }
+    }
+
+    async function fetchLogs() {
+        notifySync('syncing', 'Đang tải dữ liệu...');
+        const { data, error } = await _supabase
+            .from('logs')
+            .select('*')
+            .eq('date', state.selectedDate);
+        
+        if (!error) {
+            state.logs = (data || []).sort((a, b) => b.id - a.id);
             renderDiary();
-            renderLibrary();
+            notifySync('success', 'Đã cập nhật');
+        } else {
+            notifySync('error', 'Lỗi: ' + error.message);
+        }
+    }
+
+    async function fetchGoal() {
+        const { data, error } = await _supabase.from('settings').select('value').eq('key', 'daily_goal').maybeSingle();
+        if (!error && data) {
+            state.goal = data.value;
             document.getElementById('goalInput').value = state.goal;
-            if(withToast) notifySync('success');
-        } catch (e) { console.error(e); }
+            renderDiary();
+        }
     }
 
     function renderDiary() {
         const list = document.getElementById('diaryList');
-        const dayLogs = state.logs.filter(l => l.date === state.selectedDate);
-        const total = dayLogs.reduce((acc, curr) => acc + curr.total_kcal, 0);
+        const total = state.logs.reduce((acc, curr) => acc + (curr.total_kcal || 0), 0);
 
         document.getElementById('curKcal').innerText = Math.round(total).toLocaleString();
         document.getElementById('goalLabel').innerText = state.goal.toLocaleString();
-        const pct = Math.min((total / state.goal) * 100, 100);
+        
+        const pct = state.goal > 0 ? Math.min((total / state.goal) * 100, 100) : 0;
         document.getElementById('progressFill').style.width = pct + '%';
         document.getElementById('pctLabel').innerText = Math.round(pct) + '%';
 
-        list.innerHTML = dayLogs.length ? dayLogs.map(l => `
+        list.innerHTML = state.logs.length ? state.logs.map(l => `
             <div class="item-card">
-                <div class="item-info"><h4>${l.food_name}</h4><p>${l.quantity} phần • ${l.kcal_per_unit} kcal/đv</p></div>
+                <div class="item-info">
+                    <h4 style="margin:0">${l.food_name || 'Không rõ tên'}</h4>
+                    <p style="margin:4px 0 0; font-size:0.8rem; color:var(--text-sub);">${l.quantity} phần • ${l.kcal_per_unit} kcal/đv</p>
+                </div>
                 <div style="display:flex; align-items:center;">
                     <div class="kcal-badge">${Math.round(l.total_kcal)} kcal</div>
-                    <button class="btn-del" style="margin-left:12px" onclick="deleteItem('LOG', ${l.rowIndex})">❌</button>
+                    <button class="btn-del" style="margin-left:12px" onclick="deleteItem('logs', ${l.id})">❌</button>
                 </div>
             </div>
-        `).join('') : '<p style="text-align:center; color:var(--text-sub);">Chưa có dữ liệu hôm nay</p>';
+        `).join('') : '<p style="text-align:center; color:var(--text-sub); padding:20px;">Chưa có món nào ngày ' + state.selectedDate + '</p>';
     }
 
     function renderLibrary() {
         const list = document.getElementById('libraryList');
         list.innerHTML = state.library.map(i => `
             <div class="item-card">
-                <div class="item-info"><h4>${i.name}</h4><p>${i.kcal} kcal / ${i.unit}</p></div>
-                <button class="btn-del" onclick="deleteItem('LIB', ${i.rowIndex})">❌</button>
+                <div class="item-info">
+                    <h4 style="margin:0">${i.name}</h4>
+                    <p style="margin:4px 0 0; font-size:0.8rem; color:var(--text-sub);">${i.kcal} kcal / ${i.unit}</p>
+                </div>
+                <button class="btn-del" onclick="deleteItem('library', ${i.id})">❌</button>
             </div>
         `).join('');
+
         const select = document.getElementById('logFoodSelect');
         select.innerHTML = '<option value="">-- Chọn món --</option>' + 
             state.library.map((item, idx) => `<option value="${idx}">${item.name}</option>`).join('');
@@ -349,50 +430,74 @@
 
         const food = state.library[idx];
         const safeKcalPerUnit = Math.round(food.kcal * 1.1);
-        
-        // Optimistic UI
-        state.logs.push({ date: state.selectedDate, food_name: food.name, quantity: qty, kcal_per_unit: safeKcalPerUnit, total_kcal: safeKcalPerUnit * qty, rowIndex: -1 });
-        renderDiary();
+        const newLog = { 
+            date: state.selectedDate, 
+            food_name: food.name, 
+            quantity: qty, 
+            kcal_per_unit: safeKcalPerUnit, 
+            total_kcal: safeKcalPerUnit * qty 
+        };
+
+        notifySync('syncing', 'Đang lưu...');
         closeModal('addLogModal');
+
+        const { data, error } = await _supabase.from('logs').insert([newLog]).select();
         
-        notifySync('syncing');
-        await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'ADD_LOG', date: state.selectedDate, food_name: food.name, quantity: qty, kcal_per_unit: safeKcalPerUnit })});
-        setTimeout(() => refreshData(true), 1500);
+        if (!error && data) {
+            state.logs.unshift(data[0]);
+            renderDiary();
+            notifySync('success');
+        } else {
+            notifySync('error', 'Lỗi lưu: ' + error.message);
+        }
     }
 
     async function submitLib() {
-        const name = document.getElementById('libName').value;
-        const unit = document.getElementById('libUnit').value;
+        const name = document.getElementById('libName').value.trim();
+        const unit = document.getElementById('libUnit').value.trim();
         const kcal = parseFloat(document.getElementById('libKcal').value);
         if(!name || !unit || isNaN(kcal)) return;
 
-        state.library.push({ name, unit, kcal, rowIndex: -1 });
-        renderLibrary();
+        notifySync('syncing');
         closeModal('addLibModal');
 
-        notifySync('syncing');
-        await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'ADD_LIB', name, unit, kcal })});
-        setTimeout(() => refreshData(true), 1500);
+        const { data, error } = await _supabase.from('library').insert([{ name, unit, kcal }]).select();
+        if (!error && data) {
+            state.library.push(data[0]);
+            state.library.sort((a, b) => a.name.localeCompare(b.name));
+            renderLibrary();
+            notifySync('success');
+        } else {
+            notifySync('error', error.message);
+        }
     }
 
     async function updateGoal() {
         const goalVal = parseInt(document.getElementById('goalInput').value);
-        state.goal = goalVal;
-        renderDiary();
+        if (isNaN(goalVal)) return;
         notifySync('syncing');
-        await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'UPDATE_GOAL', goal: goalVal })});
-        notifySync('success');
+        const { error } = await _supabase.from('settings').upsert({ key: 'daily_goal', value: goalVal });
+        if (!error) {
+            state.goal = goalVal;
+            renderDiary();
+            notifySync('success');
+        } else {
+            notifySync('error');
+        }
     }
 
-    async function deleteItem(sheet, row) {
-        if(!confirm("Xác nhận xóa?")) return;
-        if(sheet === 'LOG') state.logs = state.logs.filter(l => l.rowIndex !== row);
-        else state.library = state.library.filter(i => i.rowIndex !== row);
-        renderDiary(); renderLibrary();
-
+    async function deleteItem(table, id) {
+        if(!confirm("Xóa món này?")) return;
         notifySync('syncing');
-        await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'DELETE_ROW', sheet, row })});
-        setTimeout(() => refreshData(true), 1000);
+        const { error } = await _supabase.from(table).delete().eq('id', id);
+        if (!error) {
+            if(table === 'logs') state.logs = state.logs.filter(l => l.id !== id);
+            else state.library = state.library.filter(i => i.id !== id);
+            renderDiary(); renderLibrary();
+            notifySync('success');
+        } else {
+            notifySync('error', error.message);
+        }
     }
 
     function switchTab(tab, btn) {
