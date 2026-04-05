@@ -1,16 +1,32 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KcalTracker">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2424/2424381.png">
+
+    <script>
+      // Đăng ký Service Worker
+      if ('service-worker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./service-worker.js')
+            .then(reg => console.log('SW đã sẵn sàng!', reg))
+            .catch(err => console.log('SW gặp lỗi:', err));
+        });
+      }
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KcalTracker Pro - Supabase Engine</title>
+    <title>KcalTracker Pro - AI Planning</title>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            /* Light Theme Variables */
             --primary: #6366f1;
             --primary-light: #818cf8;
             --secondary: #a855f7;
@@ -26,9 +42,7 @@
             --radius-xl: 32px;
             --radius-lg: 24px;
             --radius-md: 16px;
-            --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.1);
             --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.04);
-            --glass: rgba(255, 255, 255, 0.7);
             --glass-border: rgba(255, 255, 255, 0.1);
         }
 
@@ -39,122 +53,143 @@
             --text-sub: #94a3b8;
             --nav-bg: rgba(15, 23, 42, 0.8);
             --border: #334155;
-            --glass: rgba(30, 41, 59, 0.7);
             --glass-border: rgba(255, 255, 255, 0.05);
             --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.3);
         }
 
-        * { 
-            box-sizing: border-box; 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-        }
+        * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg); color: var(--text-main); margin: 0; padding-bottom: 140px; overflow-x: hidden; }
+        .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 24px 20px; }
 
-        body { 
-            background-color: var(--bg); 
-            color: var(--text-main); 
-            margin: 0; 
-            padding-bottom: 120px; 
-            overflow-x: hidden;
-        }
-
-        .container { 
-            width: 100%; 
-            max-width: 500px; 
-            margin: 0 auto; 
-            padding: 24px 20px; 
-        }
-
-        /* Sync Status Toast */
-        #sync-status {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-100px);
-            padding: 10px 20px;
-            border-radius: 50px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            z-index: 5000;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s ease;
-        }
+        /* Sync Status */
+        #sync-status { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); padding: 10px 20px; border-radius: 50px; font-size: 0.85rem; font-weight: 700; z-index: 9999; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; }
         #sync-status.show { transform: translateX(-50%) translateY(0); }
         #sync-status.syncing { background: var(--primary); color: white; }
         #sync-status.success { background: var(--success); color: white; }
         #sync-status.error { background: var(--danger); color: white; }
 
-        /* Luxury Header */
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-        .header h1 { 
-            font-size: 1.75rem; font-weight: 800; margin: 0; 
-            background: linear-gradient(135deg, var(--primary), var(--secondary)); 
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .header h1 { font-size: 1.5rem; font-weight: 800; margin: 0; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* AI FAB */
+        .ai-fab {
+            position: fixed;
+            bottom: 110px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            cursor: pointer;
+            z-index: 990;
+            transition: transform 0.2s;
         }
 
-        /* Theme Buttons */
-        .theme-selector { display: flex; background: var(--card); border: 1px solid var(--border); padding: 4px; border-radius: 50px; gap: 4px; }
-        .theme-btn { border: none; background: none; cursor: pointer; padding: 6px; border-radius: 50%; color: var(--text-sub); width: 32px; height: 32px; }
-        .theme-btn.active { background: var(--primary); color: white; }
+        /* AI Modal Content & Tabs */
+        .ai-modal-content { background: var(--card); width: 100%; padding: 24px; border-radius: 32px 32px 0 0; max-height: 90vh; overflow-y: auto; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); position: relative; }
+        .ai-tabs { display: flex; gap: 8px; margin-bottom: 20px; background: var(--bg); padding: 4px; border-radius: 16px; }
+        .ai-tab-btn { flex: 1; border: none; background: none; padding: 10px; border-radius: 12px; font-weight: 700; color: var(--text-sub); cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
+        .ai-tab-btn.active { background: var(--card); color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
-        /* Dashboard Card */
+        /* Input Container with Clear Button */
+        .ai-input-wrapper { position: relative; width: 100%; margin-bottom: 16px; }
+        .ai-textarea { width: 100%; border: 1.5px solid var(--border); background: var(--bg); color: var(--text-main); padding: 16px 45px 16px 16px; border-radius: var(--radius-md); font-size: 1rem; resize: none; outline: none; min-height: 100px; transition: border-color 0.2s; }
+        .ai-textarea:focus { border-color: var(--primary); }
+        .clear-input-btn { position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; border-radius: 50%; background: var(--border); color: var(--text-sub); border: none; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; opacity: 0.7; transition: 0.2s; }
+        .clear-input-btn:hover { opacity: 1; background: var(--danger); color: white; }
+
+        /* Custom Budget Styles */
+        .custom-budget-zone { margin: 12px 0; padding: 12px; border-radius: 16px; background: rgba(245, 158, 11, 0.05); border: 1px dashed var(--accent); }
+        .warning-text { font-size: 0.7rem; color: var(--danger); font-weight: 600; margin-top: 6px; display: block; line-height: 1.2; }
+
+        /* Planning Results UI */
+        .plan-header { background: var(--bg); padding: 16px; border-radius: var(--radius-md); margin-bottom: 16px; border: 1px solid var(--border); }
+        .meal-type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
+        @media (min-width: 400px) { .meal-type-grid { grid-template-columns: repeat(4, 1fr); } }
+        .meal-btn { padding: 10px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); color: var(--text-sub); font-weight: 700; font-size: 0.75rem; cursor: pointer; }
+        .meal-btn.active { border-color: var(--primary); background: rgba(99, 102, 241, 0.05); color: var(--primary); }
+
+        .result-card { background: var(--bg); border-radius: 20px; padding: 20px; border: 1px solid var(--border); margin-bottom: 20px; animation: fadeIn 0.4s ease-out; position: relative; }
+        .result-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .result-list { list-style: none; padding: 0; margin: 0 0 16px 0; }
+        .result-list li { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 0.95rem; }
+        .result-list li:last-child { border-bottom: none; }
+        
+        .macro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .macro-item { background: var(--card); padding: 10px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
+        .macro-val { display: block; font-weight: 800; font-size: 0.9rem; color: var(--text-main); }
+        .macro-lab { display: block; font-size: 0.7rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; }
+
+        /* Dashboard */
         .dashboard-card { 
             background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
-            border-radius: var(--radius-xl); padding: 32px 24px; color: white; margin-bottom: 32px; 
-            box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.4);
+            border-radius: var(--radius-xl); padding: 32px 24px; color: white; margin-bottom: 32px; box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.4);
         }
         .kcal-big { font-size: 3.5rem; font-weight: 800; line-height: 1; letter-spacing: -2px; }
         .progress-bg { background: rgba(255, 255, 255, 0.15); height: 12px; border-radius: 20px; margin-top: 20px; overflow: hidden; }
         .progress-fill { height: 100%; width: 0%; background: #ffffff; transition: width 0.8s ease; }
 
-        /* Inputs & Lists */
-        .date-input { width: 100%; border: 1px solid var(--border); padding: 16px 20px; border-radius: var(--radius-md); font-weight: 700; background: var(--card); color: var(--primary); outline: none; margin-bottom: 24px; }
+        .date-input { width: 100%; border: 1px solid var(--border); padding: 16px 20px; border-radius: var(--radius-md); font-weight: 700; background: var(--card); color: var(--primary); margin-bottom: 24px; outline: none; }
         .item-card { background: var(--card); padding: 20px; border-radius: var(--radius-lg); display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; box-shadow: var(--shadow-lg); border: 1px solid var(--border); }
         .kcal-badge { background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; padding: 4px 12px; border-radius: 50px; font-size: 0.9rem; font-weight: 800; }
 
-        /* Buttons */
-        .btn { border: none; border-radius: var(--radius-md); padding: 18px; font-weight: 700; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; transition: 0.2s; }
+        .btn { border: none; border-radius: var(--radius-md); padding: 18px; font-weight: 700; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; transition: 0.2s; font-size: 0.95rem; }
         .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
         .btn-outline { background: var(--card); border: 1px solid var(--border); color: var(--text-main); }
-        .btn-del { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: none; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-save-ai { background: var(--success); color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
 
-        /* Bottom Nav */
+        /* Action Buttons for AI Suggestion Cards */
+        .action-btn-group { display: flex; gap: 8px; }
+        .action-btn { width: 36px; height: 36px; border-radius: 10px; border: none; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: 0.2s; }
+        .btn-add { background: var(--success); color: white; }
+        .btn-ignore { background: var(--border); color: var(--text-sub); }
+        .btn-add:active { transform: scale(0.9); }
+        .btn-added { background: var(--text-sub); color: white; pointer-events: none; opacity: 0.5; }
+
+        .loading-state { display: flex; flex-direction: column; align-items: center; padding: 30px; gap: 15px; }
+        .pulse-loader { width: 40px; height: 40px; background: var(--primary); border-radius: 50%; animation: pulse 1.2s infinite; opacity: 0.6; }
+        @keyframes pulse { 0% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(0.8); opacity: 0.5; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .theme-selector { display: flex; background: var(--card); border: 1px solid var(--border); padding: 4px; border-radius: 50px; gap: 4px; }
+        .theme-btn { border: none; background: none; cursor: pointer; padding: 6px; border-radius: 50%; color: var(--text-sub); width: 32px; height: 32px; }
+        .theme-btn.active { background: var(--primary); color: white; }
+
         .bottom-nav { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 400px; background: var(--nav-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; justify-content: space-around; padding: 10px; border-radius: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 1px solid var(--glass-border); z-index: 1000; }
-        .nav-item { border: none; background: none; color: var(--text-sub); font-size: 0.75rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 16px; transition: 0.3s; cursor: pointer; }
+        .nav-item { border: none; background: none; color: var(--text-sub); font-size: 0.75rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 16px; cursor: pointer; }
         .nav-item.active { color: var(--primary); }
 
-        /* Modal */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); display: none; align-items: flex-end; z-index: 2000; }
-        .modal-content { background: var(--card); width: 100%; padding: 32px 24px 48px; border-radius: 32px 32px 0 0; animation: slideIn 0.4s ease; }
-        @keyframes slideIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); display: none; align-items: flex-end; z-index: 2000; visibility: hidden; }
+        .modal.open { display: flex; visibility: visible; }
         
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 0.9rem; }
-        .form-group input, .form-group select { width: 100%; padding: 14px 16px; border: 1.5px solid var(--border); border-radius: 14px; background: var(--bg); color: var(--text-main); font-weight: 600; outline: none; }
-
-        .loading { position: fixed; inset: 0; background: var(--bg); z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .spinner { width: 50px; height: 50px; border: 5px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: rot 1s linear infinite; }
-        @keyframes rot { to { transform: rotate(360deg); } }
-
+        /* Confirm Modal specific centering */
+        .modal-center { align-items: center; justify-content: center; padding: 20px; }
+        .confirm-card { background: var(--card); width: 100%; max-width: 340px; padding: 28px; border-radius: var(--radius-lg); text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+        
         .view { display: none; }
         .view.active { display: block; }
         .section-title { font-size: 1.25rem; font-weight: 800; margin: 32px 0 16px; display: flex; align-items: center; gap: 10px; }
         .section-title span { width: 4px; height: 20px; background: var(--primary); border-radius: 10px; }
+        
+        .input-standard { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px; background: var(--card); color: var(--text-main); outline: none; }
+        .input-inline { border: 1px solid var(--border); padding: 8px 12px; border-radius: 10px; font-weight: 700; color: var(--accent); width: 100px; text-align: center; background: var(--card); }
     </style>
 </head>
 <body>
 
-<div id="sync-status">
-    <span id="sync-icon">🔄</span> <span id="sync-text">Đang kết nối...</span>
-</div>
+<div id="sync-status"><span id="sync-icon">🔄</span> <span id="sync-text">Đang kết nối...</span></div>
 
-<div id="loading" class="loading">
-    <div class="spinner"></div>
-    <p style="margin-top:20px; font-weight:700; color:var(--text-sub);">SUPABASE POWERED</p>
-</div>
+<!-- AI FAB -->
+<button class="ai-fab" onclick="openModal('aiModal')">✨</button>
 
 <div class="container">
     <div class="header">
@@ -171,89 +206,141 @@
         <input type="date" id="datePicker" class="date-input">
         
         <div class="dashboard-card">
-            <div style="font-size:0.85rem; opacity:0.8; font-weight:600; text-transform:uppercase;">Calories Hôm nay</div>
+            <div style="font-size:0.85rem; opacity:0.8; font-weight:600; text-transform:uppercase;">Ước tính (+10% Sai số)</div>
             <div style="margin: 8px 0; display: flex; align-items: baseline; gap: 10px;">
                 <span id="curKcal" class="kcal-big">0</span> 
                 <span style="font-size:1.2rem; opacity:0.8;">/ <span id="goalLabel">2000</span></span>
             </div>
             <div class="progress-bg"><div id="progressFill" class="progress-fill"></div></div>
             <div style="margin-top: 15px; font-size: 0.8rem; font-weight: 600; opacity: 0.8; display: flex; justify-content: space-between;">
-                <span>SAI SỐ DỰ PHÒNG 10%</span>
+                <span id="rawKcalLabel">GỐC: 0 KCAL</span>
                 <span id="pctLabel">0%</span>
             </div>
         </div>
 
-        <button class="btn btn-primary" onclick="openModal('addLogModal')">THÊM BỮA ĂN</button>
-        <div class="section-title"><span></span>LỊCH SỬ</div>
+        <button class="btn btn-primary" onclick="openModal('addLogModal')">THÊM BỮA ĂN THỦ CÔNG</button>
+        <div class="section-title"><span></span>NHẬT KÝ HÔM NAY</div>
         <div id="diaryList"></div>
     </div>
 
     <!-- LIBRARY VIEW -->
     <div id="view-library" class="view">
-        <button class="btn btn-primary" onclick="openModal('addLibModal')">TẠO MÓN MỚI</button>
-        <div class="section-title"><span></span>THƯ VIỆN</div>
+        <button class="btn btn-primary" onclick="openModal('addLibModal')">TẠO MÓN THƯ VIỆN</button>
+        <div class="section-title"><span></span>DANH SÁCH MÓN ĂN</div>
         <div id="libraryList"></div>
     </div>
 
     <!-- SETTINGS VIEW -->
     <div id="view-settings" class="view">
-        <div class="section-title"><span></span>CÀI ĐẶT & BẢO TRÌ</div>
+        <div class="section-title"><span></span>CÀI ĐẶT MỤC TIÊU</div>
         <div style="background:var(--card); padding:24px; border-radius:var(--radius-lg); border: 1px solid var(--border); margin-bottom: 16px;">
-            <div class="form-group">
-                <label>Hạn mức Calories mỗi ngày</label>
-                <input type="number" id="goalInput">
-            </div>
-            <button class="btn btn-primary" onclick="updateGoal()">LƯU CÀI ĐẶT</button>
+            <label style="display:block; font-weight:700; margin-bottom:12px;">Hạn mức Calo mục tiêu (kcal)</label>
+            <input type="number" id="goalInput" class="input-standard" placeholder="Ví dụ: 2000">
+            <button class="btn btn-primary" onclick="updateGoal()">LƯU MỤC TIÊU MỚI</button>
         </div>
-        
-        <div style="background:var(--card); padding:24px; border-radius:var(--radius-lg); border: 1px solid var(--border);">
-            <label style="display:block; font-weight:700; margin-bottom:12px; font-size:0.9rem;">Bảo trì Database</label>
-            <p style="font-size:0.8rem; color:var(--text-sub); margin-bottom:16px;">
-                Hệ thống tự động xóa các bản ghi cũ hơn 3 tháng mỗi khi khởi động. Bạn cũng có thể kích hoạt thủ công bên dưới.
-            </p>
-            <button class="btn btn-outline" style="color:var(--danger); border-color:var(--danger)" onclick="autoCleanupLogs(true)">
-                DỌN DẸP NGAY BÂY GIỜ
-            </button>
+    </div>
+</div>
+
+<!-- AI MODAL -->
+<div id="aiModal" class="modal" onclick="if(event.target==this) closeModal('aiModal')">
+    <div class="ai-modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0">Trợ lý Thông minh ✨</h3>
+            <button onclick="closeModal('aiModal')" style="border:none; background:none; font-size:24px; color:var(--text-sub); padding:10px;">✕</button>
         </div>
 
-        <p style="text-align: center; margin-top: 24px; font-size: 0.7rem; color: var(--text-sub);">
-            Powered by Supabase Realtime Database
-        </p>
+        <div class="ai-tabs">
+            <button class="ai-tab-btn active" id="tab-analyze-btn" onclick="switchAITab('analyze')">ƯỚC LƯỢNG KCAL</button>
+            <button class="ai-tab-btn" id="tab-plan-btn" onclick="switchAITab('plan')">KẾ HOẠCH ĂN</button>
+        </div>
+
+        <!-- Analyze Tab -->
+        <div id="ai-tab-analyze">
+            <div class="ai-input-wrapper">
+                <textarea id="aiPrompt" class="ai-textarea" placeholder="Hôm nay bạn đã ăn gì? Ví dụ: 1 tô phở bò, 1 ly cafe sữa..."></textarea>
+                <button class="clear-input-btn" onclick="clearAIInput('aiPrompt')">✕</button>
+            </div>
+            <button id="btnAI" class="btn btn-primary" onclick="analyzeMeal()" style="margin-bottom:20px;">PHÂN TÍCH NHANH</button>
+            <div id="ai-suggestions"></div>
+        </div>
+
+        <!-- Plan Tab -->
+        <div id="ai-tab-plan" style="display:none;">
+            <div class="plan-header">
+                <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom:12px; font-weight:700;">CHỌN BỮA MUỐN ĂN</div>
+                <div class="meal-type-grid">
+                    <button class="meal-btn active" onclick="selectMealType('morning', this)">SÁNG</button>
+                    <button class="meal-btn" onclick="selectMealType('lunch', this)">TRƯA</button>
+                    <button class="meal-btn" onclick="selectMealType('dinner', this)">TỐI</button>
+                    <button class="meal-btn" onclick="selectMealType('snack', this)">PHỤ</button>
+                </div>
+
+                <!-- Custom Budget Section -->
+                <div class="custom-budget-zone">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="useCustomBudget" onchange="toggleCustomBudget(this.checked)" style="width:18px; height:18px; accent-color:var(--primary);">
+                        <label for="useCustomBudget" style="font-size:0.85rem; font-weight:700; color:var(--text-main);">Tùy chỉnh ngân sách</label>
+                    </div>
+                    <div id="custom-input-box" style="display:none; margin-top:10px; align-items:center; gap:10px;">
+                        <input type="number" id="customBudgetVal" class="input-inline" placeholder="0" oninput="calculateMealBudget()">
+                        <span style="font-size:0.8rem; font-weight:700;">KCAL</span>
+                    </div>
+                    <div id="custom-warning" style="display:none;">
+                        <span class="warning-text">⚠️ Hệ thống sẽ không cam kết hiệu quả kế hoạch khi bạn tự ý tùy chỉnh ngân sách kcal.</span>
+                    </div>
+                </div>
+
+                <div id="plan-budget-info" style="font-weight:800; color:var(--primary); font-size:0.95rem; margin-top:10px;">
+                    Ngân sách bữa: -- kcal
+                </div>
+            </div>
+            
+            <div class="ai-input-wrapper">
+                <textarea id="planPrompt" class="ai-textarea" placeholder="Mô tả món bạn thèm... AI sẽ cân đối định lượng giúp bạn."></textarea>
+                <button class="clear-input-btn" onclick="clearAIInput('planPrompt')">✕</button>
+            </div>
+            <button id="btnPlan" class="btn btn-primary" onclick="planMeal()" style="margin-bottom:20px;">XÂY DỰNG THỰC ĐƠN</button>
+            <div id="plan-result-container"></div>
+        </div>
+    </div>
+</div>
+
+<!-- CUSTOM CONFIRM MODAL -->
+<div id="confirmModal" class="modal modal-center" onclick="closeConfirm(false)">
+    <div class="confirm-card" onclick="event.stopPropagation()">
+        <div style="font-size: 40px; margin-bottom: 16px;">⚠️</div>
+        <h3 id="confirmTitle" style="margin: 0 0 8px 0; font-size: 1.2rem;">Xác nhận xóa?</h3>
+        <p id="confirmText" style="color: var(--text-sub); margin: 0 0 24px 0; font-size: 0.95rem;">Hành động này không thể hoàn tác.</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <button class="btn btn-outline" onclick="closeConfirm(false)">HỦY</button>
+            <button class="btn btn-danger" onclick="closeConfirm(true)">XÓA NGAY</button>
+        </div>
     </div>
 </div>
 
 <!-- MODAL ADD LOG -->
 <div id="addLogModal" class="modal" onclick="if(event.target==this) closeModal('addLogModal')">
-    <div class="modal-content">
+    <div class="ai-modal-content" onclick="event.stopPropagation()">
         <h3 style="margin:0 0 20px 0;">Ghi nhận bữa ăn</h3>
-        <div class="form-group">
-            <label>Chọn món từ thư viện</label>
-            <select id="logFoodSelect"></select>
-        </div>
-        <div class="form-group">
-            <label>Số lượng</label>
-            <input type="number" id="logQty" value="1" step="0.1">
-        </div>
+        <select id="logFoodSelect" class="input-standard"></select>
+        <input type="number" id="logQty" value="1" step="0.1" class="input-standard" placeholder="Số lượng">
         <div style="display:grid; grid-template-columns: 1fr 2fr; gap:12px;">
             <button class="btn btn-outline" onclick="closeModal('addLogModal')">HỦY</button>
-            <button class="btn btn-primary" id="btnSubmitLog" onclick="submitLog()">XÁC NHẬN</button>
+            <button class="btn btn-primary" onclick="submitLog()">XÁC NHẬN</button>
         </div>
     </div>
 </div>
 
 <!-- MODAL ADD LIB -->
 <div id="addLibModal" class="modal" onclick="if(event.target==this) closeModal('addLibModal')">
-    <div class="modal-content">
-        <h3 style="margin:0 0 20px 0;">Thêm thư viện</h3>
-        <div class="form-group"><label>Tên món</label><input type="text" id="libName" placeholder="Ví dụ: Cơm trắng"></div>
-        <div class="form-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-            <div><label>Đơn vị</label><input type="text" id="libUnit" placeholder="bát, cái, gram"></div>
-            <div><label>Kcal gốc</label><input type="number" id="libKcal" placeholder="0"></div>
+    <div class="ai-modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin:0 0 20px 0;">Thêm vào thư viện</h3>
+        <input type="text" id="libName" placeholder="Tên món ăn" class="input-standard">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom: 16px;">
+            <input type="text" id="libUnit" placeholder="Đơn vị (Bát, Đĩa...)" class="input-standard" style="margin-bottom:0">
+            <input type="number" id="libKcal" placeholder="Calo mỗi đv" class="input-standard" style="margin-bottom:0">
         </div>
-        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:12px;">
-            <button class="btn btn-outline" onclick="closeModal('addLibModal')">HỦY</button>
-            <button class="btn btn-primary" id="btnSubmitLib" onclick="submitLib()">LƯU MÓN</button>
-        </div>
+        <button class="btn btn-primary" onclick="submitLib()">LƯU THƯ VIỆN</button>
     </div>
 </div>
 
@@ -264,17 +351,18 @@
 </nav>
 
 <script>
-    // --- SUPABASE CONFIG ---
     const SUPABASE_URL = "https://blqlwcupzigwfiekhfns.supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_edRGbdZVh_U_I3MUXO73Hw_i5rZeV9A"; 
+    const GEMINI_API_KEY = "AIzaSyBCgFiyrNBJta9vNrrZ1HuAopSxnumsRwY"; 
+
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let state = {
-        logs: [], 
-        library: [], 
-        goal: 2000,
+        logs: [], library: [], goal: 2000,
         selectedDate: new Date().toLocaleDateString('en-CA'), 
-        theme: localStorage.getItem('kcal-theme') || 'system'
+        theme: localStorage.getItem('kcal-theme') || 'system',
+        currentMealType: 'morning',
+        confirmCallback: null
     };
 
     window.onload = async () => {
@@ -284,171 +372,362 @@
             state.selectedDate = e.target.value; 
             await fetchLogs(); 
         };
-        
-        if (!SUPABASE_URL || !SUPABASE_KEY) {
-            toggleLoading(false);
-            notifySync('error', 'Cấu hình Supabase trống!');
-            return;
-        }
-
         await initialLoad();
-        // Tự động dọn dẹp log cũ ngay khi vào app
-        autoCleanupLogs();
+        // Tự động dọn dẹp dữ liệu cũ hơn 3 tháng khi khởi động ứng dụng
+        await cleanupOldData();
     };
 
-    function notifySync(status, customMsg) {
-        const toast = document.getElementById('sync-status');
-        const icon = document.getElementById('sync-icon');
-        const text = document.getElementById('sync-text');
-        toast.className = 'show ' + status;
-        if (status === 'syncing') { icon.innerText = '🔄'; text.innerText = customMsg || 'Đang đồng bộ...'; }
-        else if (status === 'success') { icon.innerText = '✅'; text.innerText = customMsg || 'Đã lưu thành công'; setTimeout(() => toast.className = '', 2000); }
-        else if (status === 'error') { icon.innerText = '⚠️'; text.innerText = customMsg || 'Lỗi kết nối'; setTimeout(() => toast.className = '', 4000); }
-    }
-
-    function toggleLoading(s) { document.getElementById('loading').style.display = s ? 'flex' : 'none'; }
-
-    async function initialLoad() {
-        toggleLoading(true);
+    /**
+     * Tự động xóa các bản ghi logs cũ hơn 3 tháng (90 ngày) để tối ưu tài nguyên
+     */
+    async function cleanupOldData() {
         try {
-            await fetchLibrary();
-            await fetchGoal();
-            await fetchLogs();
-        } catch (e) {
-            console.error("Lỗi khởi tạo:", e);
-        }
-        toggleLoading(false);
-    }
+            const ninetyDaysAgo = new Date();
+            ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+            const dateString = ninetyDaysAgo.toISOString().split('T')[0];
 
-    // --- TÍNH NĂNG MỚI: TỰ ĐỘNG DỌN DẸP LOG CŨ HƠN 3 THÁNG ---
-    async function autoCleanupLogs(manual = false) {
-        if(manual) notifySync('syncing', 'Đang dọn dẹp data cũ...');
-        
-        try {
-            const threeMonthsAgo = new Date();
-            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-            const dateStr = threeMonthsAgo.toLocaleDateString('en-CA'); // YYYY-MM-DD
-
-            const { count, error } = await _supabase
+            console.log("Dọn dẹp hệ thống: Kiểm tra dữ liệu cũ hơn ngày", dateString);
+            
+            // Xóa trực tiếp trên Supabase các logs có trường 'date' nhỏ hơn ngày 90 ngày trước
+            const { error, count } = await _supabase
                 .from('logs')
-                .delete()
-                .lt('date', dateStr); // Xóa các bản ghi có ngày nhỏ hơn (cũ hơn) mốc này
+                .delete({ count: 'exact' })
+                .lt('date', dateString);
 
-            if (!error) {
-                if(manual) notifySync('success', 'Đã dọn dẹp xong!');
-                console.log(`Bảo trì: Đã dọn dẹp các log cũ trước ngày ${dateStr}`);
-            } else {
-                console.error("Lỗi bảo trì:", error);
-                if(manual) notifySync('error', 'Lỗi dọn dẹp: ' + error.message);
+            if (error) {
+                console.warn("Lỗi dọn dẹp:", error.message);
+            } else if (count > 0) {
+                console.log(`Đã tự động tối ưu: Xóa ${count} bản ghi nhật ký đã quá hạn 3 tháng.`);
             }
         } catch (e) {
-            console.error("Lỗi thực thi dọn dẹp:", e);
+            console.error("Lỗi trong quá trình cleanup:", e);
         }
+    }
+
+    function notifySync(status, msg) {
+        const toast = document.getElementById('sync-status');
+        toast.className = 'show ' + status;
+        document.getElementById('sync-text').innerText = msg || 'Xong!';
+        if (status !== 'syncing') setTimeout(() => toast.className = '', 2000);
+    }
+
+    /* Custom Confirm Logic */
+    function showConfirm(title, text, callback) {
+        document.getElementById('confirmTitle').innerText = title;
+        document.getElementById('confirmText').innerText = text;
+        state.confirmCallback = callback;
+        openModal('confirmModal');
+    }
+
+    function closeConfirm(isConfirmed) {
+        closeModal('confirmModal');
+        if (isConfirmed && state.confirmCallback) {
+            state.confirmCallback();
+        }
+        state.confirmCallback = null;
+    }
+
+    function clearAIInput(id) {
+        document.getElementById(id).value = '';
+        document.getElementById(id).focus();
+    }
+
+    async function initialLoad() {
+        await fetchLibrary(); 
+        await fetchGoal(); 
+        await fetchLogs();
     }
 
     async function fetchLibrary() {
-        const { data, error } = await _supabase.from('library').select('*');
-        if (!error) { 
-            state.library = (data || []).sort((a, b) => (a.name || "").localeCompare(b.name || "")); 
-            renderLibrary(); 
-        } else {
-            notifySync('error', 'Lỗi Library: ' + error.message);
-        }
+        const { data } = await _supabase.from('library').select('*');
+        state.library = (data || []).sort((a,b) => b.id - a.id);
+        renderLibrary();
     }
 
     async function fetchLogs() {
-        notifySync('syncing', 'Đang tải dữ liệu...');
-        const { data, error } = await _supabase
-            .from('logs')
-            .select('*')
-            .eq('date', state.selectedDate);
-        
-        if (!error) {
-            state.logs = (data || []).sort((a, b) => b.id - a.id);
-            renderDiary();
-            notifySync('success', 'Đã cập nhật');
-        } else {
-            notifySync('error', 'Lỗi: ' + error.message);
-        }
+        const { data } = await _supabase.from('logs').select('*').eq('date', state.selectedDate);
+        state.logs = (data || []).sort((a,b) => b.id - a.id);
+        renderDiary();
     }
 
     async function fetchGoal() {
-        const { data, error } = await _supabase.from('settings').select('value').eq('key', 'daily_goal').maybeSingle();
-        if (!error && data) {
+        const { data } = await _supabase.from('settings').select('value').eq('key', 'daily_goal').maybeSingle();
+        if (data) {
             state.goal = data.value;
-            document.getElementById('goalInput').value = state.goal;
+            document.getElementById('goalInput').value = data.value;
+        }
+        renderDiary();
+    }
+
+    function switchAITab(tab) {
+        document.getElementById('ai-tab-analyze').style.display = tab === 'analyze' ? 'block' : 'none';
+        document.getElementById('ai-tab-plan').style.display = tab === 'plan' ? 'block' : 'none';
+        document.getElementById('tab-analyze-btn').classList.toggle('active', tab === 'analyze');
+        document.getElementById('tab-plan-btn').classList.toggle('active', tab === 'plan');
+        if(tab === 'plan') calculateMealBudget();
+    }
+
+    function selectMealType(type, btn) {
+        state.currentMealType = type;
+        document.querySelectorAll('.meal-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        calculateMealBudget();
+    }
+
+    function toggleCustomBudget(isChecked) {
+        document.getElementById('custom-input-box').style.display = isChecked ? 'flex' : 'none';
+        document.getElementById('custom-warning').style.display = isChecked ? 'block' : 'none';
+        calculateMealBudget();
+    }
+
+    function calculateMealBudget() {
+        const useCustom = document.getElementById('useCustomBudget').checked;
+        const customVal = parseFloat(document.getElementById('customBudgetVal').value);
+        
+        let budget = 0;
+        let note = "";
+
+        if (useCustom && !isNaN(customVal)) {
+            budget = customVal;
+            note = "(Tùy chỉnh)";
+        } else {
+            const rawTotal = state.logs.reduce((a,c) => a + (c.total_kcal || 0), 0);
+            const remainingRaw = state.goal - rawTotal;
+            const budgetPool = Math.max(0, remainingRaw * 0.9);
+            
+            switch(state.currentMealType) {
+                case 'morning': budget = budgetPool / 3; note = "(Quỹ chia 3)"; break;
+                case 'lunch': budget = budgetPool / 2; note = "(Quỹ chia 2)"; break;
+                case 'dinner': budget = budgetPool; note = "(Còn lại toàn bộ)"; break;
+                case 'snack': budget = state.goal * 0.1; note = "(Cố định 10% tổng)"; break;
+            }
+        }
+
+        const bVal = Math.round(budget);
+        const color = useCustom ? 'var(--accent)' : 'var(--success)';
+        
+        document.getElementById('plan-budget-info').innerHTML = `
+            Ngân sách: <span style="font-size:1.1rem; color:${color}">${bVal.toLocaleString()} kcal</span> 
+            <small style="opacity:0.5; font-weight:400; margin-left:5px;">${note}</small>
+        `;
+        return bVal;
+    }
+
+    async function analyzeMeal() {
+        const prompt = document.getElementById('aiPrompt').value.trim();
+        if (!prompt) return;
+        const btn = document.getElementById('btnAI');
+        btn.disabled = true; btn.innerText = 'Đang phân tích...';
+        
+        const systemInstruction = `Bạn là chuyên gia dinh dưỡng VN. Phân tích thực đơn và trả về JSON: {"meals": [{"food_name": "...", "quantity": 1, "unit": "...", "kcal_per_unit": 0}]}`;
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    systemInstruction: { parts: [{ text: systemInstruction }] },
+                    generationConfig: { responseMimeType: "application/json" }
+                })
+            });
+            const result = await response.json();
+            const data = JSON.parse(result.candidates[0].content.parts[0].text);
+            renderAnalyzeResults(data.meals);
+        } catch (e) { notifySync('error', 'Lỗi phân tích'); }
+        finally { btn.disabled = false; btn.innerText = 'PHÂN TÍCH NHANH'; }
+    }
+
+    function renderAnalyzeResults(meals) {
+        const box = document.getElementById('ai-suggestions');
+        box.innerHTML = meals.map((m, i) => `
+            <div id="ai-item-${i}" class="result-card" style="margin-bottom:12px; border-style:dashed;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:700;">${m.food_name}</div>
+                        <div style="font-size:0.8rem; color:var(--text-sub);">${m.quantity} ${m.unit} • ${m.kcal_per_unit} kcal</div>
+                    </div>
+                    <div class="action-btn-group">
+                        <button class="action-btn btn-ignore" onclick="ignoreAIItem(${i})">✕</button>
+                        <button id="add-btn-${i}" class="action-btn btn-add" onclick="saveMealFromAI('${m.food_name}', ${m.quantity}, ${m.kcal_per_unit}, ${i}, false)">＋</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function ignoreAIItem(index) {
+        const el = document.getElementById(`ai-item-${index}`);
+        if(el) {
+            el.style.opacity = '0';
+            el.style.transform = 'translateX(20px)';
+            setTimeout(() => el.remove(), 300);
+        }
+    }
+
+    async function planMeal() {
+        const userWish = document.getElementById('planPrompt').value.trim();
+        const budget = calculateMealBudget();
+        if (!userWish) return;
+        
+        const btn = document.getElementById('btnPlan');
+        const container = document.getElementById('plan-result-container');
+        btn.disabled = true;
+        container.innerHTML = `<div class="loading-state"><div class="pulse-loader"></div><p style="font-size:0.85rem; color:var(--text-sub);">AI đang thiết kế thực đơn cho bạn...</p></div>`;
+
+        const systemInstruction = `Bạn là trợ lý dinh dưỡng. Người dùng muốn ăn "${userWish}" với ngân sách tối đa ${budget} kcal, sử dụng đơn vị quen thuộc, đời thưởng, dễ ước lượng.
+        Hãy thiết kế thực đơn phù hợp. Trả về định dạng JSON: {
+            "title": "Thực đơn ${userWish}",
+            "items": [{"name": "...", "amount": "..."}],
+            "macros": {"p": "...", "c": "...", "f": "..."},
+            "total_kcal": 0
+        }`;
+
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `Tôi muốn ăn ${userWish} trong ngân sách ${budget} kcal` }] }],
+                    systemInstruction: { parts: [{ text: systemInstruction }] },
+                    generationConfig: { responseMimeType: "application/json" }
+                })
+            });
+            const result = await response.json();
+            const plan = JSON.parse(result.candidates[0].content.parts[0].text);
+            
+            container.innerHTML = `
+                <div class="result-card" id="plan-result-card">
+                    <div class="result-title">🍱 ${plan.title}</div>
+                    <ul class="result-list">
+                        ${plan.items.map(it => `<li><span>${it.name}</span> <span style="font-weight:600; color:var(--text-sub);">${it.amount}</span></li>`).join('')}
+                    </ul>
+                    <div class="macro-grid">
+                        <div class="macro-item"><span class="macro-val">${plan.macros.p}</span><span class="macro-lab">Prot</span></div>
+                        <div class="macro-item"><span class="macro-val">${plan.macros.c}</span><span class="macro-lab">Carb</span></div>
+                        <div class="macro-item"><span class="macro-val">${plan.macros.f}</span><span class="macro-lab">Fat</span></div>
+                    </div>
+                    <div style="background:var(--card); padding:15px; border-radius:15px; border:1px solid var(--border); margin-bottom:15px; text-align:center;">
+                        Tổng ước tính: <b style="color:var(--primary); font-size:1.1rem;">${plan.total_kcal} kcal</b>
+                    </div>
+                    <div class="action-btn-group" style="justify-content:center; gap: 12px;">
+                        <button class="btn btn-outline" style="width: auto;" onclick="document.getElementById('plan-result-card').remove()">BỎ QUA</button>
+                        <button id="plan-add-btn" class="btn btn-save-ai" style="width: auto; padding: 18px 32px;" onclick="saveMealFromAI('${plan.title}', 1, ${plan.total_kcal}, 'plan', false)">
+                            THÊM VÀO NHẬT KÝ
+                        </button>
+                    </div>
+                </div>
+            `;
+        } catch (e) { container.innerHTML = `<p style="color:var(--danger); text-align:center;">Có lỗi khi kết nối với AI. Thử lại sau nhé!</p>`; }
+        finally { btn.disabled = false; }
+    }
+
+    async function saveMealFromAI(name, qty, kcal, indexId, shouldClose = true) {
+        const btn = indexId === 'plan' ? document.getElementById('plan-add-btn') : document.getElementById(`add-btn-${indexId}`);
+        if(btn) {
+            btn.innerHTML = '...';
+            btn.disabled = true;
+        }
+
+        notifySync('syncing', 'Đang lưu...');
+        const { data, error } = await _supabase.from('logs').insert([{
+            date: state.selectedDate, food_name: name, quantity: qty,
+            kcal_per_unit: kcal, total_kcal: kcal * qty
+        }]).select();
+        
+        if(!error) {
+            state.logs.unshift(data[0]);
             renderDiary();
+            notifySync('success', 'Đã thêm!');
+            
+            if(indexId === 'plan') {
+                const card = document.getElementById('plan-result-card');
+                if(card) card.style.opacity = '0.5';
+                if(btn) { btn.innerText = 'ĐÃ LƯU ✓'; btn.className = 'btn btn-added'; }
+            } else {
+                if(btn) { btn.innerText = '✓'; btn.className = 'action-btn btn-added'; }
+            }
+
+            if(shouldClose) closeModal('aiModal');
+        } else {
+            if(btn) { btn.innerText = '＋'; btn.disabled = false; }
+            notifySync('error', 'Lỗi khi lưu');
         }
     }
 
     function renderDiary() {
-        const list = document.getElementById('diaryList');
-        const total = state.logs.reduce((acc, curr) => acc + (curr.total_kcal || 0), 0);
-
-        document.getElementById('curKcal').innerText = Math.round(total).toLocaleString();
+        const rawTotal = state.logs.reduce((a,c) => a + (c.total_kcal || 0), 0);
+        const adjustedTotal = Math.round(rawTotal * 1.1);
+        document.getElementById('curKcal').innerText = adjustedTotal.toLocaleString();
         document.getElementById('goalLabel').innerText = state.goal.toLocaleString();
+        document.getElementById('rawKcalLabel').innerText = `GỐC: ${Math.round(rawTotal).toLocaleString()} KCAL`;
         
-        const pct = state.goal > 0 ? Math.min((total / state.goal) * 100, 100) : 0;
+        const pct = state.goal > 0 ? Math.min((adjustedTotal/state.goal)*100, 100) : 0;
         document.getElementById('progressFill').style.width = pct + '%';
         document.getElementById('pctLabel').innerText = Math.round(pct) + '%';
 
-        list.innerHTML = state.logs.length ? state.logs.map(l => `
+        document.getElementById('diaryList').innerHTML = state.logs.length ? state.logs.map(l => `
             <div class="item-card">
-                <div class="item-info">
-                    <h4 style="margin:0">${l.food_name || 'Không rõ tên'}</h4>
-                    <p style="margin:4px 0 0; font-size:0.8rem; color:var(--text-sub);">${l.quantity} phần • ${l.kcal_per_unit} kcal/đv</p>
+                <div>
+                    <h4 style="margin:0 0 4px 0;">${l.food_name}</h4>
+                    <small style="color:var(--text-sub);">${l.quantity} phần • ${l.kcal_per_unit} kcal</small>
                 </div>
-                <div style="display:flex; align-items:center;">
-                    <div class="kcal-badge">${Math.round(l.total_kcal)} kcal</div>
-                    <button class="btn-del" style="margin-left:12px" onclick="deleteItem('logs', ${l.id})">❌</button>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div class="kcal-badge">${Math.round(l.total_kcal)}</div>
+                    <button onclick="confirmDeleteLog(${l.id})" style="border:none; background:none; cursor:pointer; font-size:1.1rem; opacity:0.5;">🗑️</button>
                 </div>
             </div>
-        `).join('') : '<p style="text-align:center; color:var(--text-sub); padding:20px;">Chưa có món nào ngày ' + state.selectedDate + '</p>';
+        `).join('') : `<div style="text-align:center; padding:40px; color:var(--text-sub); opacity:0.5;">Chưa có dữ liệu ăn uống hôm nay.</div>`;
+    }
+
+    function confirmDeleteLog(id) {
+        showConfirm("Xóa bữa ăn?", "Bạn chắc chắn muốn xóa bữa ăn này khỏi nhật ký?", async () => {
+            const { error } = await _supabase.from('logs').delete().eq('id', id);
+            if(!error) {
+                state.logs = state.logs.filter(l => l.id !== id);
+                renderDiary();
+                notifySync('success', 'Đã xóa');
+            }
+        });
     }
 
     function renderLibrary() {
-        const list = document.getElementById('libraryList');
-        list.innerHTML = state.library.map(i => `
+        document.getElementById('libraryList').innerHTML = state.library.map(i => `
             <div class="item-card">
-                <div class="item-info">
-                    <h4 style="margin:0">${i.name}</h4>
-                    <p style="margin:4px 0 0; font-size:0.8rem; color:var(--text-sub);">${i.kcal} kcal / ${i.unit}</p>
-                </div>
-                <button class="btn-del" onclick="deleteItem('library', ${i.id})">❌</button>
+                <div><h4 style="margin:0;">${i.name}</h4><small>${i.kcal} kcal / ${i.unit}</small></div>
+                <button onclick="confirmDeleteLib(${i.id})" style="border:none; background:none; cursor:pointer; font-size:1.1rem; opacity:0.5;">🗑️</button>
             </div>
         `).join('');
+        document.getElementById('logFoodSelect').innerHTML = state.library.map((item, idx) => `<option value="${idx}">${item.name}</option>`).join('');
+    }
 
-        const select = document.getElementById('logFoodSelect');
-        select.innerHTML = '<option value="">-- Chọn món --</option>' + 
-            state.library.map((item, idx) => `<option value="${idx}">${item.name}</option>`).join('');
+    function confirmDeleteLib(id) {
+        showConfirm("Xóa khỏi thư viện?", "Món ăn này sẽ bị gỡ bỏ vĩnh viễn khỏi danh sách thư viện.", async () => {
+            const { error } = await _supabase.from('library').delete().eq('id', id);
+            if(!error) {
+                state.library = state.library.filter(l => l.id !== id);
+                renderLibrary();
+                notifySync('success', 'Đã xóa thư viện');
+            }
+        });
     }
 
     async function submitLog() {
         const idx = document.getElementById('logFoodSelect').value;
         const qty = parseFloat(document.getElementById('logQty').value);
-        if(idx === "" || isNaN(qty)) return;
-
         const food = state.library[idx];
-        const safeKcalPerUnit = Math.round(food.kcal * 1.1);
-        const newLog = { 
-            date: state.selectedDate, 
-            food_name: food.name, 
-            quantity: qty, 
-            kcal_per_unit: safeKcalPerUnit, 
-            total_kcal: safeKcalPerUnit * qty 
-        };
-
-        notifySync('syncing', 'Đang lưu...');
-        closeModal('addLogModal');
-
-        const { data, error } = await _supabase.from('logs').insert([newLog]).select();
+        if(!food || isNaN(qty)) return;
         
-        if (!error && data) {
+        notifySync('syncing', 'Đang ghi...');
+        const { data, error } = await _supabase.from('logs').insert([{
+            date: state.selectedDate, food_name: food.name, quantity: qty,
+            kcal_per_unit: food.kcal, total_kcal: food.kcal * qty
+        }]).select();
+        
+        if(!error) {
             state.logs.unshift(data[0]);
             renderDiary();
-            notifySync('success');
-        } else {
-            notifySync('error', 'Lỗi lưu: ' + error.message);
+            notifySync('success', 'Đã ghi nhận!');
+            closeModal('addLogModal');
         }
     }
 
@@ -457,46 +736,22 @@
         const unit = document.getElementById('libUnit').value.trim();
         const kcal = parseFloat(document.getElementById('libKcal').value);
         if(!name || !unit || isNaN(kcal)) return;
-
-        notifySync('syncing');
-        closeModal('addLibModal');
-
         const { data, error } = await _supabase.from('library').insert([{ name, unit, kcal }]).select();
-        if (!error && data) {
-            state.library.push(data[0]);
-            state.library.sort((a, b) => a.name.localeCompare(b.name));
+        if(!error) {
+            state.library.unshift(data[0]);
             renderLibrary();
-            notifySync('success');
-        } else {
-            notifySync('error', error.message);
+            closeModal('addLibModal');
         }
     }
 
     async function updateGoal() {
-        const goalVal = parseInt(document.getElementById('goalInput').value);
-        if (isNaN(goalVal)) return;
-        notifySync('syncing');
-        const { error } = await _supabase.from('settings').upsert({ key: 'daily_goal', value: goalVal });
-        if (!error) {
-            state.goal = goalVal;
+        const val = parseInt(document.getElementById('goalInput').value);
+        if(isNaN(val)) return;
+        const { error } = await _supabase.from('settings').upsert({ key: 'daily_goal', value: val });
+        if(!error) {
+            state.goal = val;
             renderDiary();
-            notifySync('success');
-        } else {
-            notifySync('error');
-        }
-    }
-
-    async function deleteItem(table, id) {
-        if(!confirm("Xóa món này?")) return;
-        notifySync('syncing');
-        const { error } = await _supabase.from(table).delete().eq('id', id);
-        if (!error) {
-            if(table === 'logs') state.logs = state.logs.filter(l => l.id !== id);
-            else state.library = state.library.filter(i => i.id !== id);
-            renderDiary(); renderLibrary();
-            notifySync('success');
-        } else {
-            notifySync('error', error.message);
+            notifySync('success', 'Đã lưu mục tiêu!');
         }
     }
 
@@ -507,8 +762,14 @@
         btn.classList.add('active');
     }
 
-    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function openModal(id) { 
+        document.getElementById(id).classList.add('open'); 
+        document.body.style.overflow = 'hidden';
+    }
+    function closeModal(id) { 
+        document.getElementById(id).classList.remove('open'); 
+        document.body.style.overflow = 'auto';
+    }
 
     function setTheme(mode) {
         state.theme = mode; localStorage.setItem('kcal-theme', mode); applyTheme(mode);
@@ -523,6 +784,5 @@
         } else body.setAttribute('data-theme', mode);
     }
 </script>
-
 </body>
 </html>
